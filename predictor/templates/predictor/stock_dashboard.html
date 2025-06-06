@@ -1,0 +1,18 @@
+<h2>News Sentiment for {{ company }}</h2>
+
+<p><strong>Overall sentiment:</strong> {{ sentiment_data.summary }}</p>
+<p><strong>Average score:</strong> {{ sentiment_data.sentiment_score }}</p>
+
+<h3>Top News:</h3>
+<ul>
+  {% for article in sentiment_data.top_news %}
+    <li>
+      <a href="{{ article.url }}" target="_blank" style="font-weight:bold; text-decoration:none; color:#007bff;">
+        {{ article.title }}
+      </a><br>
+      <small style="color:#555;">{{ article.description }}</small>
+    </li>
+  {% empty %}
+    <li>No news found.</li>
+  {% endfor %}
+</ul>

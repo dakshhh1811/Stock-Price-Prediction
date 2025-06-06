@@ -1,0 +1,14 @@
+{% extends 'predictor/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">📈 Stock Price Prediction</h2>
+  <div class="card p-4 shadow">
+    <h4 class="mb-3">Company: <strong>{{ company }}</strong></h4>
+    <p>📅 <strong>Prediction Date:</strong> {{ prediction_date }}</p>
+    <p>💰 <strong>Predicted Closing Price:</strong> ₹{{ prediction }}</p>
+    <a href="{% url 'stock_chart' company %}" class="btn btn-outline-primary mt-3">📊 View Stock Chart</a>
+    <a href="{% url 'stock_dashboard' company %}" class="btn btn-outline-success mt-3">📰 View Sentiment</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Plot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        img {
+            max-width: 80%;
+            height: auto;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Stock Plot</h1>
+
+    {% if plot_url %}
+        <img src="data:image/png;base64,{{ plot_url }}" alt="Stock Plot">
+    {% else %}
+        <p>No plot data available.</p>
+    {% endif %}
+</body>
+</html>
