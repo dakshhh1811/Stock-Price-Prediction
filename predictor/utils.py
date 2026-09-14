@@ -1,20 +1,30 @@
-import requests
-from textblob import TextBlob
-
-
-
+import os
 import requests
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 def fetch_news_sentiment(company):
-    api_key = '12624afdd2c04efd8a28b2313a9d67e1'
+    api_key = os.environ.get('NEWS_API_KEY')
+    if not api_key:
+        return {
+           "company": company,
+            "sentiment_score": None,
+            "summary": "News sentiment unavailable: NEWS_API_KEY is not set.",
+            "top_news": []
+        }
     url = f'https://newsapi.org/v2/everything?q={company}&language=en&sortBy=publishedAt&pageSize=5&apiKey={api_key}'
 
-    response = requests.get(url)
-    data = response.json()
-
-    if data['status'] != 'ok' or not data['articles']:
+try:
+       response = requests.get(url, timeout=10)
+       response.raise_for_status()
+       data = response.json()
+except requests.RequestException:
+        return {
+            "company": company,
+            "sentiment_score": None,
+            "summary": f"Could not fetch news for {company} (request failed).",
+            "top_news": []
+        }
+if data.get('status') != 'ok' or not data.get('articles'):
         return {
             "company": company,
             "sentiment_score": None,
@@ -27,13 +37,13 @@ def fetch_news_sentiment(company):
     top_news = []
 
     for article in data['articles']:
-        text = article['title'] + ' ' + (article['description'] or '')
+        text = (article.get('title') or '') + ' ' + (article.get('description') or '')
         vs = analyzer.polarity_scores(text)
         scores.append(vs['compound'])
         top_news.append({
-            "title": article['title'],
-            "description": article['description'],
-            "url": article['url']
+            "title": article.get('title'),
+           "description": article.get('description'),
+           "url": article.get('url')
         })
 
     avg_score = sum(scores) / len(scores)

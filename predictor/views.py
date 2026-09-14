@@ -1,27 +1,21 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.template.loader import get_template
-import matplotlib.pyplot as plt
-import io
-import urllib, base64
-import yfinance as yf
-import plotly.graph_objs as go
-from plotly.offline import plot
-import os
-from django.conf import settings
-import pandas as pd
-from .utils import fetch_news_sentiment
-import  datetime
-import joblib
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
 import io
 import base64
-from django.shortcuts import redirect
+from datetime import datetime
+import joblib
+import matplotlib.pyplot as plt
+import plotly.graph_objs as go
+import yfinance as yf
+from django.conf import settings
+from django.shortcuts import render, redirect
+from .utils import fetch_news_sentiment
 
 
-
-model = joblib.load('ml/stock_predictor.pkl')
+# Load once, from an absolute path so it doesn't depend on cwd.
++MODEL_PATH = settings.BASE_DIR / 'ml' / 'stock_predictor.pkl'
+try:
+    model = joblib.load(MODEL_PATH)
+except FileNotFoundError:
+    model = None
 
 def redirect_to_company(request):
     company = request.GET.get('company', 'TCS.NS')
@@ -29,14 +23,17 @@ def redirect_to_company(request):
 
 
 def stock_predict(request, company="TCS.NS"):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import io
-    import base64
+    
 
-    # Get company from query param if exists (example: ?company=INFY.NS)
     company = request.GET.get('company', company).upper()
 
+    if model is None:
+       return render(request, "predictor/prediction.html", {
+            "company": company,
+            "predicted_price": "Model not available",
+            "chart": None,
+            "news_sentiment": "No news available"
+        })
     # Download recent stock data
     data = yf.download(company, period="1mo", interval="1d")
 
@@ -86,7 +83,7 @@ def stock_predict(request, company="TCS.NS"):
 
     context = {
         "company": company,
-        "predicted_price": round(predicted_price, 2),
+        "predicted_price": round(float(predicted_price), 2),
         "chart": chart_base64,
         "news_sentiment": news_summary,
         "prediction_date": datetime.today().strftime("%Y-%m-%d"),
@@ -99,51 +96,28 @@ def stock_predict(request, company="TCS.NS"):
 
 
 
+def stock_chart(request, company="TCS.NS"):
+    company = request.GET.get('company', company).upper()
+    stock_data = yf.download(company, period="1mo", interval="1d")
 
-def fetch_news_sentiment(company):
-    # This is dummy data for example. Replace this with real API calls later.
-    data = {
-        "company": company,
-        "sentiment_score": 0.12,
-        "summary": "Overall sentiment is Positive based on recent news.",
-        "top_news": [
-            {
-                "title": "Sri Adhik Bros expands business",
-                "description": "Sri Adhik Bros has launched a new product line.",
-                "url": "https://example.com/news1"
-            },
-            {
-                "title": "Sri Adhik Bros partners with ABC Corp",
-                "description": "New partnership announced to increase market reach.",
-                "url": "https://example.com/news2"
-            }
-        ]
-    }
-    return data
-
-def stock_chart(request, company="Sri Adhik Bros"):
-    ticker = "TCS.NS"  # Replace this with dynamic ticker mapping for your company
-    stock_data = yf.download(ticker, period="1mo", interval="1d")
-
-    # Sample sentiment scores (replace with real ones later)
-    sentiment_scores = [0.1, 0.15, 0.05, -0.02, 0.2, 0.12, 0.18][:len(stock_data)]
+    if stock_data.empty:
+        return render(request, 'predictor/stock_chart.html', {'plot_div': None, 'company': company})
 
     # Plot
     trace1 = go.Scatter(x=stock_data.index, y=stock_data['Close'], mode='lines+markers', name='Stock Price')
-    trace2 = go.Scatter(x=stock_data.index[:len(sentiment_scores)], y=sentiment_scores, mode='lines+markers', name='Sentiment Score', yaxis='y2')
+ 
 
     layout = go.Layout(
-        title=f'{company} - Price & Sentiment',
+        title=f'{company} - Price',
         yaxis=dict(title='Stock Price'),
-        yaxis2=dict(title='Sentiment Score', overlaying='y', side='right'),
         xaxis=dict(title='Date'),
         legend=dict(x=0, y=1.2)
     )
 
-    fig = go.Figure(data=[trace1, trace2], layout=layout)
+    fig = go.Figure(data=[trace1], layout=layout)
     chart_div = fig.to_html(full_html=False)
 
-    return render(request, 'predictor/stock_chart.html', {'plot_div': chart_div})
+    return render(request, 'predictor/stock_chart.html', {'plot_div': chart_div, 'company': company})
 
 def stock_dashboard(request, company):
     sentiment_data = fetch_news_sentiment(company)
